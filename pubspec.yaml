@@ -1,0 +1,36 @@
+name: stavelight
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  archive: ^4.5.2
+  file_picker: ^13.3.0
+  flutter:
+    sdk: flutter
+  flutter_midi_command: ^1.0.3
+  flutter_midi_command_ble: ^1.4.0
+  flutter_pcm_sound: ^3.3.3
+  image: ^4.12.0
+  image_picker: ^1.2.4
+  path_provider: ^2.1.6
+  pdfrx: ^2.4.7
+  permission_handler: ^12.0.1
+  provider: ^6.1.5+1
+  record: ^6.2.1
+  share_plus: ^13.3.1
+  shared_preferences: ^2.5.6
+  uuid: ^4.6.0
+  wakelock_plus: ^1.7.0
+  xml: ^7.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
