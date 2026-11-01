@@ -98,3 +98,7 @@ Manual checks need a real device:
   - iOS features on a device: import, practice, mic, MIDI.
   - Real MIDI keyboards, the microphone with a real piano, and audio latency.
   - Real-world scans: only synthetic pages were run through recognition.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
