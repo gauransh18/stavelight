@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../app/app_state.dart';
+import '../../core/platform/platform_capabilities.dart';
 import '../../data/settings_repository.dart';
 import '../calibration/calibration_screen.dart';
 import '../calibration/input_test_screen.dart';
@@ -154,17 +155,35 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _export(BuildContext context) async {
     final app = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final bytes = await app.library.exportBackup();
-      final dir = await getTemporaryDirectory();
       final stamp = DateTime.now().toIso8601String().substring(0, 10);
-      final f = File('${dir.path}/stavelight-backup-$stamp.zip');
+      final fileName = 'stavelight-backup-$stamp.zip';
+
+      if (PlatformCaps.isDesktop) {
+        // Desktop has no universal share sheet. Write the backup to the app
+        // documents directory and tell the user exactly where it is. This uses
+        // only path_provider + dart:io, so there is no plugin-API risk.
+        final dir = await getApplicationDocumentsDirectory();
+        final outDir = Directory('${dir.path}${Platform.pathSeparator}Stavelight backups');
+        await outDir.create(recursive: true);
+        final out = File('${outDir.path}${Platform.pathSeparator}$fileName');
+        await out.writeAsBytes(bytes, flush: true);
+        messenger.showSnackBar(SnackBar(
+          content: Text('Backup saved to ${out.path}'),
+          duration: const Duration(seconds: 6),
+        ));
+        return;
+      }
+
+      // Mobile/macOS: write to a temp file and hand it to the OS share sheet.
+      final dir = await getTemporaryDirectory();
+      final f = File('${dir.path}/$fileName');
       await f.writeAsBytes(bytes, flush: true);
       await SharePlus.instance.share(ShareParams(files: [XFile(f.path, mimeType: 'application/zip')], subject: 'Stavelight backup'));
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed: $e')));
-      }
+      messenger.showSnackBar(SnackBar(content: Text('Export failed: $e')));
     }
   }
 

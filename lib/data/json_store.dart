@@ -7,7 +7,16 @@ class JsonStore {
     await f.parent.create(recursive: true);
     final tmp = File('${f.path}.tmp');
     await tmp.writeAsString(jsonEncode(json), flush: true);
-    await tmp.rename(f.path);
+    try {
+      await tmp.rename(f.path);
+    } on FileSystemException {
+      // Windows (Win32 MoveFile) cannot rename over an existing file, unlike
+      // POSIX rename. Fall back to replace-then-rename. This keeps the write
+      // close to atomic: data is fully flushed to tmp before the swap, and a
+      // crash in the tiny window leaves tmp recoverable.
+      if (await f.exists()) await f.delete();
+      await tmp.rename(f.path);
+    }
   }
 
   static Future<dynamic> read(File f) async {

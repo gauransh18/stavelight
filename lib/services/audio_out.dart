@@ -1,29 +1,42 @@
-
 import 'package:flutter/foundation.dart';
-import 'package:flutter_pcm_sound/flutter_pcm_sound.dart';
 
 import '../core/audio/synth.dart';
+import '../core/platform/platform_capabilities.dart';
 import '../core/practice/practice_engine.dart';
+import 'pcm_sink.dart';
+import 'pcm_sink_pcmsound.dart';
+import 'pcm_sink_desktop.dart';
 
-/// Streams the Dart [Synth] to the speaker. Used for metronome, preview playback and accompaniment.
+/// Streams the Dart [Synth] to the speaker. Used for metronome, preview playback
+/// and accompaniment.
+///
+/// The platform-specific output is isolated behind [PcmSink]:
+///   - Android / iOS / macOS use `flutter_pcm_sound` (unchanged behavior).
+///   - Windows / Linux use `flutter_soloud` because `flutter_pcm_sound` has no
+///     backend there.
+/// The [Synth], mixer and feed cadence are identical on every platform.
 class AudioOut implements EngineSound {
   static const sampleRate = 44100;
   static const _chunk = 1024; // ~23 ms per feed
   final Synth synth = Synth(sampleRate: sampleRate);
+  final PcmSink _sink = _makeSink();
   bool _ready = false;
   bool _failed = false;
   String? error;
+
+  static PcmSink _makeSink() =>
+      (PlatformCaps.isWindows || PlatformCaps.isLinux) ? DesktopPcmSink() : PcmSoundSink();
 
   bool get available => _ready && !_failed;
 
   Future<void> init() async {
     if (_ready || _failed) return;
     try {
-      await FlutterPcmSound.setup(sampleRate: sampleRate, channelCount: 1, iosAudioCategory: IosAudioCategory.playAndRecord);
-      await FlutterPcmSound.setFeedThreshold(_chunk * 3);
-      FlutterPcmSound.setFeedCallback(_onFeed);
+      await _sink.setup(sampleRate: sampleRate, channelCount: 1);
+      _sink.setFeedThreshold(_chunk * 3);
+      _sink.setFeedCallback(_onFeed);
       _ready = true;
-      FlutterPcmSound.start();
+      _sink.start();
     } catch (e) {
       _failed = true;
       error = '$e';
@@ -33,7 +46,7 @@ class AudioOut implements EngineSound {
 
   void _onFeed(int remaining) {
     final frames = synth.render(_chunk * 2);
-    FlutterPcmSound.feed(PcmArrayInt16(bytes: ByteData.sublistView(Uint8List.view(frames.buffer))));
+    _sink.feed(frames);
   }
 
   void setVolumes({double? playback, double? metronome}) {
@@ -51,7 +64,7 @@ class AudioOut implements EngineSound {
   void allOff() => synth.allOff();
 
   Future<void> dispose() async {
-    if (_ready) await FlutterPcmSound.release();
+    if (_ready) await _sink.release();
     _ready = false;
   }
 }

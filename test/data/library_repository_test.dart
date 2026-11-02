@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stavelight/core/import/import_types.dart';
 import 'package:stavelight/core/model/pitch.dart';
@@ -81,5 +82,21 @@ void main() {
     await repo.deleteAll();
     expect(repo.pieces, isEmpty);
     expect(dir.listSync(), isEmpty);
+  });
+
+  test('backup zip entries use forward slashes on every platform', () async {
+    final repo = LibraryRepository(dir);
+    await repo.load();
+    // A piece stores originals under pieces/<id>/..., i.e. nested paths that on
+    // Windows would otherwise use backslashes.
+    await repo.addPiece(originals: [('a.mid', Uint8List(4))], format: ImportFormat.midi, score: score('A'));
+    final zip = await repo.exportBackup();
+    final archive = ZipDecoder().decodeBytes(zip);
+    expect(archive.files, isNotEmpty);
+    for (final f in archive.files) {
+      expect(f.name.contains('\\'), isFalse, reason: 'zip entry must not contain backslashes: ${f.name}');
+    }
+    // At least one entry is nested (proving we exercised a multi-segment path).
+    expect(archive.files.any((f) => f.name.contains('/')), isTrue);
   });
 }

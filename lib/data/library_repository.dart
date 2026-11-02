@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:path/path.dart' as ppath;
 
 import '../core/import/import_types.dart';
 import '../core/model/calibration.dart';
@@ -26,11 +27,11 @@ class LibraryRepository {
   LibraryRepository(this.root);
 
   List<Piece> get pieces => List.unmodifiable(_pieces);
-  File get _indexFile => File('${root.path}/library.json');
-  File get _calibrationFile => File('${root.path}/calibration.json');
-  Directory pieceDir(String id) => Directory('${root.path}/pieces/$id');
-  File _scoreFile(String id) => File('${pieceDir(id).path}/score.json');
-  File _sessionsFile(String? pieceId) => File('${root.path}/sessions/${pieceId ?? '_free'}.json');
+  File get _indexFile => File(ppath.join(root.path, 'library.json'));
+  File get _calibrationFile => File(ppath.join(root.path, 'calibration.json'));
+  Directory pieceDir(String id) => Directory(ppath.join(root.path, 'pieces', id));
+  File _scoreFile(String id) => File(ppath.join(pieceDir(id).path, 'score.json'));
+  File _sessionsFile(String? pieceId) => File(ppath.join(root.path, 'sessions', '${pieceId ?? '_free'}.json'));
 
   Future<void> load() async {
     if (_loaded) return;
@@ -120,24 +121,24 @@ class LibraryRepository {
     final names = <String>[];
     for (var i = 0; i < originals.length; i++) {
       final name = 'original_$i.${_ext(originals[i].$1, f)}';
-      await File('${dir.path}/$name').writeAsBytes(originals[i].$2, flush: true);
+      await File(ppath.join(dir.path, name)).writeAsBytes(originals[i].$2, flush: true);
       names.add(name);
     }
     return names;
   }
 
   Future<void> _writePages(String id, List<Uint8List> pages) async {
-    final dir = Directory('${pieceDir(id).path}/pages');
+    final dir = Directory(ppath.join(pieceDir(id).path, 'pages'));
     if (await dir.exists()) await dir.delete(recursive: true);
     if (pages.isEmpty) return;
     await dir.create(recursive: true);
     for (var i = 0; i < pages.length; i++) {
-      await File('${dir.path}/page_$i.png').writeAsBytes(pages[i], flush: true);
+      await File(ppath.join(dir.path, 'page_$i.png')).writeAsBytes(pages[i], flush: true);
     }
   }
 
   Future<List<File>> pageImages(String id) async {
-    final dir = Directory('${pieceDir(id).path}/pages');
+    final dir = Directory(ppath.join(pieceDir(id).path, 'pages'));
     if (!await dir.exists()) return [];
     final files = dir.listSync().whereType<File>().where((f) => f.path.endsWith('.png')).toList()
       ..sort((a, b) => a.path.compareTo(b.path));
@@ -145,10 +146,10 @@ class LibraryRepository {
   }
 
   Future<List<(String, Uint8List)>> readOriginals(String id) async {
-    final p = byId(id);
-    if (p == null) return [];
+    final piece = byId(id);
+    if (piece == null) return [];
     return [
-      for (final n in p.originals) (n, await File('${pieceDir(id).path}/$n').readAsBytes()),
+      for (final n in piece.originals) (n, await File(ppath.join(pieceDir(id).path, n)).readAsBytes()),
     ];
   }
 
@@ -159,19 +160,19 @@ class LibraryRepository {
     required Score score,
     List<Uint8List> processedPages = const [],
   }) async {
-    final p = byId(id);
-    if (p == null) return;
+    final piece = byId(id);
+    if (piece == null) return;
     final dir = pieceDir(id);
-    for (final n in p.originals) {
-      final f = File('${dir.path}/$n');
+    for (final n in piece.originals) {
+      final f = File(ppath.join(dir.path, n));
       if (await f.exists()) await f.delete();
     }
-    p.originals = await _writeOriginals(dir, originals, format);
-    p.format = format;
-    p.sourceName = originals.map((o) => o.$1).join(', ');
-    p.updatedAt = DateTime.now();
-    p.needsReview = score.review == ReviewState.recognized || score.uncertainCount > 0;
-    p.resumeMeasure = 0;
+    piece.originals = await _writeOriginals(dir, originals, format);
+    piece.format = format;
+    piece.sourceName = originals.map((o) => o.$1).join(', ');
+    piece.updatedAt = DateTime.now();
+    piece.needsReview = score.review == ReviewState.recognized || score.uncertainCount > 0;
+    piece.resumeMeasure = 0;
     await _writePages(id, processedPages);
     await JsonStore.write(_scoreFile(id), score.toJson());
     await _saveIndex();
@@ -252,11 +253,11 @@ class LibraryRepository {
   Future<void> _copyDir(Directory from, Directory to) async {
     await to.create(recursive: true);
     await for (final e in from.list(recursive: false)) {
-      final name = e.path.split(Platform.pathSeparator).last;
+      final name = ppath.basename(e.path);
       if (e is File) {
-        await e.copy('${to.path}/$name');
+        await e.copy(ppath.join(to.path, name));
       } else if (e is Directory) {
-        await _copyDir(e, Directory('${to.path}/$name'));
+        await _copyDir(e, Directory(ppath.join(to.path, name)));
       }
     }
   }
@@ -280,7 +281,7 @@ class LibraryRepository {
   }
 
   Future<List<PracticeSession>> allSessions() async {
-    final dir = Directory('${root.path}/sessions');
+    final dir = Directory(ppath.join(root.path, 'sessions'));
     if (!await dir.exists()) return [];
     final out = <PracticeSession>[];
     for (final f in dir.listSync().whereType<File>().where((f) => f.path.endsWith('.json'))) {
@@ -295,13 +296,13 @@ class LibraryRepository {
   Future<void> recordSession(PracticeSession s, {int? measureCount, int? resumeMeasure}) async {
     final list = await sessions(s.pieceId)..add(s);
     await JsonStore.write(_sessionsFile(s.pieceId), list.map((e) => e.toJson()).toList());
-    final p = s.pieceId == null ? null : byId(s.pieceId!);
-    if (p == null) return;
-    p.sessions++;
-    p.practiceSeconds += s.durationSec;
-    p.lastPracticedAt = s.startedAt;
-    if (resumeMeasure != null) p.resumeMeasure = resumeMeasure;
-    if (measureCount != null && measureCount > 0) p.progress = progressFrom(list, measureCount);
+    final piece = s.pieceId == null ? null : byId(s.pieceId!);
+    if (piece == null) return;
+    piece.sessions++;
+    piece.practiceSeconds += s.durationSec;
+    piece.lastPracticedAt = s.startedAt;
+    if (resumeMeasure != null) piece.resumeMeasure = resumeMeasure;
+    if (measureCount != null && measureCount > 0) piece.progress = progressFrom(list, measureCount);
     await _saveIndex();
   }
 
@@ -345,7 +346,8 @@ class LibraryRepository {
     final archive = Archive();
     final files = root.listSync(recursive: true).whereType<File>().where((f) => !f.path.endsWith('.tmp'));
     for (final f in files) {
-      final rel = f.path.substring(root.path.length + 1);
+      // Zip entries use forward slashes by convention, regardless of host OS.
+      final rel = ppath.relative(f.path, from: root.path).replaceAll(r'\', '/');
       final bytes = await f.readAsBytes();
       archive.addFile(ArchiveFile(rel, bytes.length, bytes));
     }

@@ -10,6 +10,7 @@ import '../../app/app_state.dart';
 import '../../core/model/calibration.dart';
 import '../../core/model/pitch.dart';
 import '../../core/model/session.dart';
+import '../../core/platform/platform_capabilities.dart';
 import '../../core/practice/input_event.dart';
 import '../../services/mic_service.dart';
 import '../../services/midi_service.dart';
@@ -686,14 +687,24 @@ class _MidiPanelState extends State<_MidiPanel> {
                     icon: const Icon(Icons.refresh),
                     label: const Text('Refresh'),
                   ),
-                  OutlinedButton.icon(
-                    onPressed: scanning ? null : () => _scanBluetooth(midi),
-                    icon: const Icon(Icons.bluetooth_searching),
-                    label: const Text('Scan for Bluetooth MIDI'),
-                  ),
+                  if (midi.bleSupported)
+                    OutlinedButton.icon(
+                      onPressed: scanning ? null : () => _scanBluetooth(midi),
+                      icon: const Icon(Icons.bluetooth_searching),
+                      label: const Text('Scan for Bluetooth MIDI'),
+                    ),
                 ],
               ),
             ),
+            if (!midi.bleSupported)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  'On ${PlatformCaps.label}, connect your MIDI keyboard over USB. '
+                  'Bluetooth MIDI is not available here.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
           ],
         ),
       ),

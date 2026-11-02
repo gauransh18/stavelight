@@ -14,6 +14,7 @@ import '../../core/import/midi_parser.dart';
 import '../../core/import/musicxml_parser.dart';
 import '../../core/import/track_selection.dart';
 import '../../core/model/score.dart';
+import '../../core/platform/platform_capabilities.dart';
 import '../../services/pdf_raster.dart';
 import 'omr_run_screen.dart';
 import 'page_editor_screen.dart';
@@ -34,13 +35,15 @@ Future<String?> startImport(BuildContext context, {String? replacePieceId}) asyn
           subtitle: const Text('PDF, image, MusicXML (.musicxml, .xml, .mxl) or MIDI (.mid)'),
         ),
         ListTile(leading: const Icon(Icons.folder_open), title: const Text('Choose a file'), onTap: () => Navigator.pop(c, _Source.file)),
-        ListTile(
-          leading: const Icon(Icons.photo_camera_outlined),
-          title: const Text('Photograph pages'),
-          subtitle: const Text('Uses the camera; you can add several pages'),
-          onTap: () => Navigator.pop(c, _Source.camera),
-        ),
-        ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Choose photos'), onTap: () => Navigator.pop(c, _Source.photos)),
+        if (PlatformCaps.cameraCapture)
+          ListTile(
+            leading: const Icon(Icons.photo_camera_outlined),
+            title: const Text('Photograph pages'),
+            subtitle: const Text('Uses the camera; you can add several pages'),
+            onTap: () => Navigator.pop(c, _Source.camera),
+          ),
+        if (PlatformCaps.photoLibrary)
+          ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Choose photos'), onTap: () => Navigator.pop(c, _Source.photos)),
         const SizedBox(height: 8),
       ]),
     ),
@@ -107,7 +110,17 @@ Future<void> _permissionOrError(BuildContext context, PlatformException e) async
           ? 'Stavelight only uses the camera when you photograph pages. You can allow access in Settings, or import a PDF or image file instead.'
           : 'Something went wrong (${e.message ?? e.code}). You can try again or choose a file instead.'),
       actions: [
-        if (denied) TextButton(onPressed: () => openAppSettings(), child: const Text('Open settings')),
+        if (denied && PlatformCaps.appSettingsLink)
+          TextButton(
+            onPressed: () async {
+              try {
+                await openAppSettings();
+              } catch (_) {
+                /* no-op on platforms without an app-settings deep link */
+              }
+            },
+            child: const Text('Open settings'),
+          ),
         FilledButton(onPressed: () => Navigator.pop(c), child: const Text('OK')),
       ],
     ),

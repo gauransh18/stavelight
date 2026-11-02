@@ -6,6 +6,7 @@ import 'package:flutter_midi_command_ble/flutter_midi_command_ble.dart';
 
 import '../core/model/calibration.dart';
 import '../core/model/session.dart';
+import '../core/platform/platform_capabilities.dart';
 import '../core/practice/input_event.dart';
 
 enum MidiStatus { idle, scanning, connecting, connected, disconnected, unavailable }
@@ -86,6 +87,11 @@ class MidiService extends ChangeNotifier {
 
   String get profileKey => 'midi:${connected?.name ?? 'unknown'}';
 
+  /// Whether Bluetooth LE MIDI is available on this platform. The bundled
+  /// plugin has no Windows BLE backend, so the UI should hide/disable the
+  /// Bluetooth-scan affordance there and rely on USB.
+  bool get bleSupported => PlatformCaps.bleMidi;
+
   Future<void> refresh() async {
     try {
       _setup ??= _midi.onMidiSetupChanged?.listen((_) => _onSetupChanged(), onError: (Object e) => error = '$e');
@@ -118,6 +124,14 @@ class MidiService extends ChangeNotifier {
 
   /// Scan for Bluetooth MIDI keyboards. The OS asks for Bluetooth permission at this point only.
   Future<void> scanBluetooth() async {
+    if (!bleSupported) {
+      // No Windows BLE backend in the plugin; keep this a safe no-op so no
+      // transport-specific call can throw a StateError. USB is the path here.
+      error = 'Bluetooth MIDI is not available on ${PlatformCaps.label}. Connect your keyboard over USB instead.';
+      status = connected != null ? MidiStatus.connected : MidiStatus.idle;
+      notifyListeners();
+      return;
+    }
     try {
       if (!_bleConfigured) {
         _midi.configureBleTransport(UniversalBleMidiTransport());
