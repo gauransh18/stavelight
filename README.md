@@ -29,6 +29,34 @@ If Android builds fail on licenses, accept them once:
 flutter doctor --android-licenses
 ```
 
+### Releases
+
+GitHub Actions run `flutter analyze` and `flutter test` on every push to `main` and on pull requests (`.github/workflows/ci.yml`).
+
+Pushing a tag such as `v1.0.0` runs `.github/workflows/release.yml`:
+1. analyze and test;
+2. build a signed APK and App Bundle (version from the tag, build number from the run number) and check the APK's signer;
+3. check that the iOS release build compiles (no signing: iOS distribution needs a paid Apple Developer account);
+4. publish a GitHub Release with the APK, AAB and `SHA256SUMS.txt`. Tags with a hyphen (`v1.1.0-beta.1`) become pre-releases.
+
+Android signing uses an upload key. Locally, `android/key.properties` (git-ignored) points at it:
+
+```
+storeFile=/absolute/path/to/upload.jks
+storePassword=...
+keyAlias=upload
+keyPassword=...
+```
+
+In CI the same values come from the repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`. `tool/set_release_secrets.sh` uploads them from `key.properties` with the GitHub CLI. Without a key, local release builds fall back to the debug key; the release workflow refuses to publish instead.
+
+To cut a release:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
 ### Platform notes
 - **Android:** `minSdk 24`.
   - Permissions: microphone, plus Bluetooth scan/connect for BLE MIDI. Each is requested only when you use that feature.
