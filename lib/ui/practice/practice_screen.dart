@@ -211,10 +211,17 @@ class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProvid
       builder: (c) => AlertDialog(
         title: const Text('End this session?'),
         content: Text('You practiced for ${formatDuration(_engine.realElapsed.round())}. Your place is saved either way.'),
+        // Three actions don't fit one row on a phone; stack the main one above the other two.
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, 'discard'), child: const Text('Discard')),
-          TextButton(onPressed: () => Navigator.pop(c, 'keep'), child: const Text('Keep practicing')),
-          FilledButton(onPressed: () => Navigator.pop(c, 'end'), child: const Text('See summary')),
+          Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            FilledButton(onPressed: () => Navigator.pop(c, 'end'), child: const Text('See summary')),
+            const SizedBox(height: 4),
+            Row(children: [
+              TextButton(onPressed: () => Navigator.pop(c, 'discard'), child: const Text('Discard')),
+              const Spacer(),
+              TextButton(onPressed: () => Navigator.pop(c, 'keep'), child: const Text('Resume')),
+            ]),
+          ]),
         ],
       ),
     );
@@ -329,7 +336,8 @@ class _PracticeScreenState extends State<PracticeScreen> with SingleTickerProvid
     final soon = 0.12 * _cfg.tempoFactor;
     for (final n in _engine.timeline.notes) {
       if (n.start > pos + soon) break;
-      final inWindow = waiting != null ? waiting.notes.contains(n) : (n.start >= pos - 0.05 && n.start <= pos + soon) || (n.start <= pos && n.end > pos && !n.active);
+      // Light a key from just before its onset until the written hold ends (never through pedal sustain).
+      final inWindow = waiting != null ? waiting.notes.contains(n) : n.start <= pos + soon && n.end > pos;
       if (!inWindow) continue;
       if (n.active) {
         out[n.midi] = KeyState(KeyMark.target, hand: n.hand);

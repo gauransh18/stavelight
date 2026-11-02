@@ -111,7 +111,8 @@ class KeyboardPainter extends CustomPainter {
       canvas.drawRect(r, border);
       if (labels && (Pitch.pitchClass(m) == 0 || w > 26)) {
         _label(canvas, Pitch.name(m, withOctave: octaveLabels && Pitch.pitchClass(m) == 0), Offset(l + w / 2, h - 14),
-            states.containsKey(m) ? Colors.white : const Color(0xFF555555), w);
+            // White only reads on solid fills; a target key keeps its pale tint, so keep the label dark.
+            switch (states[m]?.mark) { null || KeyMark.target => const Color(0xFF555555), _ => Colors.white }, w);
       }
     }
     for (var m = layout.low; m <= layout.high; m++) {

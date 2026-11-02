@@ -240,25 +240,38 @@ class _PracticeSetupSheetState extends State<PracticeSetupSheet> {
             onSelectionChanged: (s) => setState(() => _display = s.first),
           ),
           SectionTitle('Listening with', trailing: HelpButton(_input == InputKind.mic ? 'mic' : 'midi')),
-          SegmentedButton<InputKind>(
-            segments: [
-              ButtonSegment(value: InputKind.midi, label: const Text('MIDI'), icon: const Icon(Icons.cable), enabled: midiOk),
-              const ButtonSegment(value: InputKind.mic, label: Text('Microphone'), icon: Icon(Icons.mic_none)),
-              const ButtonSegment(value: InputKind.none, label: Text('Just play'), icon: Icon(Icons.hearing_disabled_outlined)),
-            ],
-            selected: {_input},
-            onSelectionChanged: (s) => setState(() => _input = s.first),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            switch (_input) {
-              InputKind.midi => 'Connected: ${app.midi.connected?.name}. Precise pitch, timing, key release and pedal.',
-              InputKind.mic => micCal
-                  ? 'Microphone (calibrated). One note at a time is detected; unclear sounds are never counted as mistakes.'
-                  : 'Microphone is not calibrated yet. Calibrating checks the octave so right notes aren’t marked wrong.',
-              InputKind.none => 'No listening: the score plays along and nothing is scored.',
+          // A vertical list keeps long labels whole at large text sizes.
+          RadioGroup<InputKind>(
+            groupValue: _input,
+            onChanged: (v) {
+              if (v != null) setState(() => _input = v);
             },
-            style: t.bodySmall,
+            child: Column(children: [
+              RadioListTile<InputKind>(
+                value: InputKind.midi,
+                enabled: midiOk,
+                contentPadding: EdgeInsets.zero,
+                secondary: const Icon(Icons.cable),
+                title: const Text('MIDI keyboard'),
+                subtitle: Text(midiOk ? 'Connected: ${app.midi.connected?.name}. Precise pitch, timing, key release and pedal.' : 'No keyboard connected.'),
+              ),
+              RadioListTile<InputKind>(
+                value: InputKind.mic,
+                contentPadding: EdgeInsets.zero,
+                secondary: const Icon(Icons.mic_none),
+                title: const Text('Microphone'),
+                subtitle: Text(micCal
+                    ? 'Calibrated. One note at a time is detected; unclear sounds are never counted as mistakes.'
+                    : 'Not calibrated yet. Calibrating checks the octave so right notes aren’t marked wrong.'),
+              ),
+              const RadioListTile<InputKind>(
+                value: InputKind.none,
+                contentPadding: EdgeInsets.zero,
+                secondary: Icon(Icons.hearing_disabled_outlined),
+                title: Text('Just play along'),
+                subtitle: Text('The score plays and nothing is scored.'),
+              ),
+            ]),
           ),
           if (!midiOk || (_input == InputKind.mic && !micCal))
             Align(

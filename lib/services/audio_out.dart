@@ -19,6 +19,8 @@ class AudioOut implements EngineSound {
   Future<void> init() async {
     if (_ready || _failed) return;
     try {
+      // The plugin logs every buffer feed by default; keep only errors.
+      await FlutterPcmSound.setLogLevel(LogLevel.error).catchError((_) {});
       await FlutterPcmSound.setup(sampleRate: sampleRate, channelCount: 1, iosAudioCategory: IosAudioCategory.playAndRecord);
       await FlutterPcmSound.setFeedThreshold(_chunk * 3);
       FlutterPcmSound.setFeedCallback(_onFeed);

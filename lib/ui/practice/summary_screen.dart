@@ -36,22 +36,28 @@ class SummaryScreen extends StatelessWidget {
               const SizedBox(height: 4),
               Text(score.title, style: t.bodyMedium),
               const SizedBox(height: 16),
-              Wrap(spacing: 12, runSpacing: 12, children: [
-                _Stat(icon: Icons.timer_outlined, label: 'Practiced', value: formatDuration(s.durationSec)),
-                _Stat(icon: Icons.view_column_outlined, label: 'Measures played', value: '${s.measuresCompleted}'),
-                if (s.input != InputKind.none && !s.lowQuality) ...[
-                  _Stat(
-                    icon: Icons.music_note,
-                    label: mic ? 'Pitch accuracy (estimate)' : 'Pitch accuracy',
-                    value: pitch == null ? '—' : '${(pitch * 100).round()}%',
-                  ),
-                  _Stat(
-                    icon: Icons.av_timer,
-                    label: mic ? 'On time (estimate)' : 'On time',
-                    value: timing == null ? '—' : '${(timing * 100).round()}%',
-                  ),
-                ],
-              ]),
+              LayoutBuilder(builder: (context, c) {
+                // Two equal columns so the tiles always fill the row.
+                final w = (c.maxWidth - 12) / 2;
+                return Wrap(spacing: 12, runSpacing: 12, children: [
+                  _Stat(width: w, icon: Icons.timer_outlined, label: 'Practiced', value: formatDuration(s.durationSec)),
+                  _Stat(width: w, icon: Icons.view_column_outlined, label: 'Measures played', value: '${s.measuresCompleted}'),
+                  if (s.input != InputKind.none && !s.lowQuality) ...[
+                    _Stat(
+                      width: w,
+                      icon: Icons.music_note,
+                      label: mic ? 'Pitch accuracy (estimate)' : 'Pitch accuracy',
+                      value: pitch == null ? '—' : '${(pitch * 100).round()}%',
+                    ),
+                    _Stat(
+                      width: w,
+                      icon: Icons.av_timer,
+                      label: mic ? 'On time (estimate)' : 'On time',
+                      value: timing == null ? '—' : '${(timing * 100).round()}%',
+                    ),
+                  ],
+                ]);
+              }),
               if (s.input == InputKind.none)
                 const Padding(padding: EdgeInsets.only(top: 12), child: InfoBanner('This session wasn’t listening, so there is nothing to score — only time practiced is recorded.')),
               if (s.lowQuality)
@@ -126,7 +132,7 @@ class SummaryScreen extends StatelessWidget {
               const SizedBox(height: 16),
               OutlinedButton.icon(onPressed: () => Navigator.pop(context, config), icon: const Icon(Icons.replay), label: const Text('Practice again')),
               const SizedBox(height: 8),
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Back to library')),
+              TextButton(onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst), child: const Text('Back to library')),
             ]),
           ),
         ),
@@ -158,7 +164,8 @@ class _Stat extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _Stat({required this.icon, required this.label, required this.value});
+  final double width;
+  const _Stat({required this.width, required this.icon, required this.label, required this.value});
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
@@ -166,14 +173,14 @@ class _Stat extends StatelessWidget {
       label: '$label: $value',
       excludeSemantics: true,
       child: SizedBox(
-        width: 160,
+        width: width,
         child: Card(
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 8),
-              Text(value, style: t.headlineSmall),
+              Text(value, style: t.headlineMedium),
               Text(label, style: t.bodySmall),
             ]),
           ),

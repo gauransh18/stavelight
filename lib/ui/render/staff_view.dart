@@ -1414,7 +1414,7 @@ class _StaffPainter extends CustomPainter {
   void _laneLabel(Canvas canvas, double x) {
     final l = layout;
     final tp = _text('Pedal', _ts(0.95 * s, palette.ink.withValues(alpha: 0.6), weight: FontWeight.w600));
-    tp.paint(canvas, Offset(x + 0.3 * s, l.pedalTop - 1.6 * s));
+    tp.paint(canvas, Offset(x + 1.6 * s, l.pedalTop - 1.6 * s));
   }
 
   void _pedalLane(Canvas canvas, double left, double right) {

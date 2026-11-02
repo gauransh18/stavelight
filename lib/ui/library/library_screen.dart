@@ -95,9 +95,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     SliverPadding(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
                       sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: 420,
-                          mainAxisExtent: 132,
+                          // Grow the card with the text size so large Dynamic Type doesn't clip it.
+                          mainAxisExtent: 132 + 72 * (MediaQuery.textScalerOf(context).scale(16) / 16 - 1).clamp(0.0, 1.5),
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
                         ),
@@ -336,7 +337,7 @@ class _PieceCard extends StatelessWidget {
                   ]),
                   if (piece.composer != null) Text(piece.composer!, style: t.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
-                  Text('Imported ${formatDate(piece.importedAt)} · ${_formatLabel(piece.format)}', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text('${_formatLabel(piece.format)} · ${formatDate(piece.importedAt)}', style: t.bodySmall?.copyWith(color: c.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
                   const Spacer(),
                   Row(children: [
                     Expanded(child: LinearProgressIndicator(value: piece.progress, minHeight: 6, borderRadius: BorderRadius.circular(3))),

@@ -112,7 +112,7 @@ class SectionTitle extends StatelessWidget {
   const SectionTitle(this.text, {super.key, this.trailing});
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
+        padding: const EdgeInsets.fromLTRB(0, 20, 0, 8),
         child: Row(children: [
           Expanded(child: Text(text, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600))),
           ?trailing,

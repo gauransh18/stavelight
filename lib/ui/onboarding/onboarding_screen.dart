@@ -110,24 +110,30 @@ class _Page extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-      child: Center(
+    return LayoutBuilder(
+      builder: (context, c) => SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(color: SlColors.brass.withValues(alpha: 0.15), shape: BoxShape.circle),
-              child: Icon(icon, size: 56, color: Theme.of(context).colorScheme.primary),
+          // Center short pages vertically; long text (large fonts) still scrolls.
+          constraints: BoxConstraints(minHeight: c.maxHeight - 32),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(color: SlColors.brass.withValues(alpha: 0.15), shape: BoxShape.circle),
+                  child: Icon(icon, size: 56, color: Theme.of(context).colorScheme.primary),
+                ),
+                const SizedBox(height: 28),
+                Text(title, style: t.headlineSmall, textAlign: TextAlign.center),
+                const SizedBox(height: 14),
+                Text(body, style: t.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant), textAlign: TextAlign.center),
+                if (extra != null) ...[const SizedBox(height: 28), extra!],
+              ]),
             ),
-            const SizedBox(height: 28),
-            Text(title, style: t.headlineSmall, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            Text(body, style: t.bodyLarge, textAlign: TextAlign.center),
-            if (extra != null) ...[const SizedBox(height: 28), extra!],
-          ]),
+          ),
         ),
       ),
     );

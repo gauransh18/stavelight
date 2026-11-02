@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../app/app_state.dart';
@@ -24,6 +25,11 @@ class StavelightApp extends StatelessWidget {
         ThemePref.light => ThemeMode.light,
         ThemePref.dark => ThemeMode.dark,
       },
+      // Screens without an AppBar (practice, onboarding) still need status-bar icons that contrast.
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: Theme.of(context).brightness == Brightness.light ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
+        child: child!,
+      ),
       home: settings.$3 ? const LibraryScreen() : const OnboardingScreen(),
     );
   }
